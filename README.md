@@ -2,7 +2,7 @@
 
 A browser-based personal notes app: sign in with Google, create/edit/delete private rich-text notes that autosave to Cloud Firestore and sync across your sessions.
 
-**Status:** Milestone 1 (secure cloud-synced notes core) is implemented and integrated locally, developed against local emulators only. Milestone 2 covers public GitHub source publication; publication is pending. Public source availability does not mean a production application is running. The app is not deployed, and real Google sign-in has not been tested. Search and appearance customization are not implemented. See `docs/PROJECT_STATE.md`.
+**Status:** Milestone 1 (secure cloud-synced notes core) is implemented and integrated locally, developed against local emulators only. Milestone 2 source is published in the public [GitHub repository](https://github.com/Omar-Lyzkru/Online-Notes-App), with `main` as its default branch. Public source availability does not mean a production application is running. The app is not deployed, and real Google sign-in has not been tested. Search and appearance customization are not implemented. See `docs/PROJECT_STATE.md`.
 
 ## Setup
 Requires Node 22.22.2 or later within 22.x, or Node 24.15.0 or later within 24.x, to satisfy the locked development and test dependencies. Emulators also require Java 21+ (Firestore emulator).
