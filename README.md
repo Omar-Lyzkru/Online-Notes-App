@@ -2,7 +2,7 @@
 
 A browser-based personal notes app: sign in with Google, create/edit/delete private rich-text notes that autosave to Cloud Firestore and sync across your sessions.
 
-**Status:** Milestone 1 (secure cloud-synced notes core) is implemented and integrated locally, developed against local emulators only. Milestone 2 source is published in the public [GitHub repository](https://github.com/Omar-Lyzkru/Online-Notes-App), with `main` as its default branch. Public source availability does not mean a production application is running. The app is not deployed, and real Google sign-in has not been tested. Search and appearance customization are not implemented. See `docs/PROJECT_STATE.md`.
+**Status:** Milestones 1–2 (secure cloud-synced notes core, public source publication) are on `main`. Milestone 3 (search, appearance settings, reliability corrections) is implemented on the `Omar-Lyzkru/MVP-Completion-Reliability` branch and awaits review; it is not on `main`. Everything was developed and verified against local emulators only: the app is not deployed, and real Google sign-in has not been tested. Public source availability does not mean a production application is running. See `docs/PROJECT_STATE.md`.
 
 ## Setup
 Requires Node 22.22.2 or later within 22.x, or Node 24.15.0 or later within 24.x, to satisfy the locked development and test dependencies. Emulators also require Java 21+ (Firestore emulator).
@@ -17,15 +17,23 @@ Emulator sign-in uses the emulator's fake Google popup (allow popups for the dev
 
 ## Commands
 - `npm run typecheck` / `npm run build`
-- `npm test` — unit tests (autosave state machine, editor serialization)
-- `npm run test:emulator` — Firestore rules + notes API/two-session sync tests (starts emulators)
+- `npm test` — unit and UI tests (autosave state machine, editor serialization, search, preferences controller, App/Editor behavior in jsdom)
+- `npm run test:emulator` — Firestore rules (notes and preferences), notes API, preference persistence/sync/isolation and deletion-boundary tests against the Auth and Firestore emulators (starts them; needs Java 21+)
 
 ## Implemented
-Google sign-in/out; notes sidebar + Tiptap editor (toolbar: bold, italic, H1, H2, bullet list, checklist; **H3 has no toolbar button** — it is available only through the `Ctrl/Cmd+Alt+3` shortcut or by typing `### `; the other formats also have shortcuts, e.g. `Ctrl/Cmd+B`, `+I`, `+Alt+1`/`+Alt+2`, `+Shift+8` for a bullet list and `+Shift+9` for a checklist); autosave with Saving/Saved/Save failed states; revision-checked writes with a visible conflict-recovery UI; revision-checked deletes (a note that changed elsewhere is not deleted until you review it and confirm again) with pending/failed/unconfirmed notices; per-user Firestore rules.
+Google sign-in/out; notes sidebar + Tiptap editor (toolbar: bold, italic, H1, H2, bullet list, checklist; **H3 has no toolbar button** — it is available only through the `Ctrl/Cmd+Alt+3` shortcut or by typing `### `; the other formats also have shortcuts, e.g. `Ctrl/Cmd+B`, `+I`, `+Alt+1`/`+Alt+2`, `+Shift+8` for a bullet list and `+Shift+9` for a checklist); autosave with Saving/Saved/Save failed states; revision-checked writes with a visible conflict-recovery UI; revision-checked deletes (a note that changed elsewhere is not deleted until you review it and confirm again) with pending/failed/unconfirmed notices; search; appearance settings; per-user Firestore rules.
+
+### Search
+Type in the **Search notes** box above the list. A note matches when every word you typed appears (any case) in its title or in its text — headings, paragraphs, list and checklist items. Formatting itself is never searched. The list narrows as you type and follows changes as they sync; clearing the box restores the full list. "No notes match" (with a Clear search button) is different from "No notes yet". Searching never changes a note, and the note you have open stays open, with your unsaved edits, even when it is not in the results. Search covers saved content: an open note's unsaved edits are not searched until they are saved.
+
+### Appearance settings
+**Settings** in the header opens a panel with: theme (light or dark), background (plain, paper, mint, sky, rose) and note text size (small, medium, large, extra large). Changes show immediately and are saved to your account, so they follow you to every session and survive a reload; the panel says "Saving…" until the server confirms and "Not saved" (with Retry) if it cannot. Another session of the same account updates live. Each account has its own settings; with no saved settings the light, plain, medium defaults apply. Everything is operable with the keyboard (Escape closes the panel).
 
 ## Limitations
-Online-first (no offline editing or persistent cache); no search/theming; conflicts are resolved by explicit user choice, never merged; single-user notes only.
+Online-first (no offline editing or persistent cache); conflicts are resolved by explicit user choice, never merged; single-user notes only.
 
-- The expected-revision delete check runs in the application's client transaction. A modified Firestore SDK client signed in as the same owner can bypass it; Firestore rules still enforce ownership.
-- Dismissing an unconfirmed deletion notice forgets the displayed uncertainty; dismissal does not confirm the outcome.
-- If you edit a note while its deletion is pending and then accept the prompt to switch notes, those unsaved edits are not saved, even if the deletion is later refused.
+- The expected-revision delete check runs in the application's client transaction. A modified Firestore SDK client signed in as the same owner can bypass it (verified with the emulator); Firestore rules still enforce ownership. Stronger enforcement would need an owner decision (see `docs/DECISIONS.md`).
+- An unconfirmed deletion stays flagged (banner and ⚠ in the list) until the server shows the note gone or you delete again; the flag lives in memory for the session only.
+- While a delete of the open note is pending and the note has unsaved edits, switching notes waits until the server answers, so those edits are not lost if the delete is refused.
+- Drafts are not stored on your device: closing the tab or signing out elsewhere with unsaved edits loses them.
+- Concurrent changes to the same appearance setting from two sessions end with the later one.

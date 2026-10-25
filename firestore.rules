@@ -14,6 +14,21 @@ service cloud.firestore {
         && d.createdAt is timestamp && d.updatedAt is timestamp;
     }
 
+    // Appearance preferences: one document per user, a fixed set of choices (keep in sync with src/appearance.ts).
+    function validPrefs() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['theme', 'background', 'fontSize', 'updatedAt'])
+        && d.theme in ['light', 'dark']
+        && d.background in ['plain', 'paper', 'mint', 'sky', 'rose']
+        && d.fontSize in ['small', 'medium', 'large', 'xlarge']
+        && d.updatedAt == request.time;
+    }
+
+    match /users/{uid}/preferences/appearance {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validPrefs();
+    }
+
     match /users/{uid}/notes/{noteId} {
       allow read, delete: if isOwner(uid);
       allow create: if isOwner(uid) && validShape() && request.resource.data.rev == 1;
