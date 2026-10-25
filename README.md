@@ -2,10 +2,10 @@
 
 A browser-based personal notes app: sign in with Google, create/edit/delete private rich-text notes that autosave to Cloud Firestore and sync across your sessions.
 
-**Status:** Milestone 1 (secure cloud-synced notes core), developed against local emulators only. Not deployed. Search and appearance customization (Milestone 2) are not implemented. Real Google sign-in has not been tested. See `docs/PROJECT_STATE.md`.
+**Status:** Milestone 1 (secure cloud-synced notes core) is implemented and integrated locally, developed against local emulators only. Milestone 2 covers public GitHub source publication; publication is pending. Public source availability does not mean a production application is running. The app is not deployed, and real Google sign-in has not been tested. Search and appearance customization are not implemented. See `docs/PROJECT_STATE.md`.
 
 ## Setup
-Requires Node 20+ and, for emulators, Java 21+ (Firestore emulator).
+Requires Node 22.22.2 or later within 22.x, or Node 24.15.0 or later within 24.x, to satisfy the locked development and test dependencies. Emulators also require Java 21+ (Firestore emulator).
 
 ```
 npm install
@@ -25,3 +25,7 @@ Google sign-in/out; notes sidebar + Tiptap editor (toolbar: bold, italic, H1, H2
 
 ## Limitations
 Online-first (no offline editing or persistent cache); no search/theming; conflicts are resolved by explicit user choice, never merged; single-user notes only.
+
+- The expected-revision delete check runs in the application's client transaction. A modified Firestore SDK client signed in as the same owner can bypass it; Firestore rules still enforce ownership.
+- Dismissing an unconfirmed deletion notice forgets the displayed uncertainty; dismissal does not confirm the outcome.
+- If you edit a note while its deletion is pending and then accept the prompt to switch notes, those unsaved edits are not saved, even if the deletion is later refused.

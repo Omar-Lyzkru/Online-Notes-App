@@ -2,6 +2,8 @@
 
 **Stage:** Milestone 1 implemented; all review findings (sign-out and note-switching draft loss, the emulator auth-domain setup, stale state after delete, the remote-delete double prompt, the stale-after-acknowledgement display gap) and the owner-approved deletion-safety decisions (revision-aware deletion, pending-deletion safety, including delete answers that arrive after the user switched notes and reconciliation of unconfirmed outcomes) are implemented and committed locally (commit `8b9ed17`, the independently reviewed snapshot) and integrated into the local `main` branch by fast-forward. The final independent review reported no confirmed implementation defects remaining. No Git remote is configured: not published to GitHub, not deployed. This is a partial milestone, **not** the finished MVP.
 
+Milestone 2 is public GitHub source publication. The owner approved the destination `Omar-Lyzkru/Online-Notes-App` (public, intended default branch `main`), publication of the existing commit email metadata, and documentation-only publication preparation. Approval of the exact publication commit and external creation/push operations is pending. The source has not been published; no application deployment or production Firebase changes are part of this milestone.
+
 ## Implemented
 Auth UI (Google), notes CRUD, Tiptap editor with the five formats, autosave, conflict detection/recovery, Firestore rules, emulator config.
 
@@ -12,7 +14,7 @@ Auth UI (Google), notes CRUD, Tiptap editor with the five formats, autosave, con
 - Tests: `npm test` — 84 tests (20 save-controller, 1 serialization, 3 Firebase config, 8 delete-outcome classification with a scripted transaction, 52 App/Editor UI tests in jsdom with Firebase and a lifecycle-aware Tiptap double). `npm run test:emulator` — 18 tests against the Firestore/Auth emulators (5 rules, 13 notes API: revision-aware deletion — match, stale refusal with content intact, repeated concurrent updates, cross-user denial, a delete/save race loop, a deterministic read-then-write interleaving, unreachable server — and listener-snapshot characterization of local versus server-delivered removals). Requires Java 21+.
 
 ## Not implemented
-Search, appearance customization, MVP polish (Milestone 2); deployment; offline editing; any durable offline deletion queue (offline deletes fail visibly by design).
+Search, appearance customization, MVP polish; deployment; offline editing; any durable offline deletion queue (offline deletes fail visibly by design). These features are outside the publication-only Milestone 2.
 
 ## Unverified
 Real Google OAuth with a live or production Firebase configuration, and real Google account authorization — the local Auth emulator's simulated Google sign-in does not show that production OAuth (authorized domains, consent, real accounts) works; accessibility and small-screen layout beyond CSS review. The behaviors above were also exercised in headless Chrome on Windows against the emulators with scripted DOM events and simulated outages (not by hand with real input, not other browsers); the scripted scenarios are most reliable with a fresh Chrome process each: in one long-lived headless Chrome process, a later scenario (discarding a draft of a remotely deleted note) twice found the page's Firestore SDK stuck offline, identically on the pre-deletion code and not with a fresh process — attributed to the harness, not established. Atomicity is evidenced by the emulator transaction tests; the race loop is a stress test, not a proof.
