@@ -1,0 +1,35 @@
+{
+  "name": "online-notes-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --exclude \"tests/emulator/**\"",
+    "test:emulator": "firebase emulators:exec --only auth,firestore --project demo-notes \"vitest run tests/emulator\"",
+    "emulators": "firebase emulators:start --only auth,firestore --project demo-notes"
+  },
+  "dependencies": {
+    "@tiptap/extension-task-item": "^3.32.0",
+    "@tiptap/extension-task-list": "^3.32.0",
+    "@tiptap/pm": "^3.32.0",
+    "@tiptap/react": "^3.32.0",
+    "@tiptap/starter-kit": "^3.32.0",
+    "firebase": "^13.1.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "firebase-tools": "^15.34.1",
+    "jsdom": "^30.1.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}
