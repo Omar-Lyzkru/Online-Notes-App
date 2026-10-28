@@ -1,0 +1,10 @@
+rules_version = '2';
+// Emergency lockdown: denies every client request, including the approved owner's. Contains no data and no uid.
+// Deploy only with owner authorization (see docs/DEPLOYMENT.md, "Rollback and recovery"). It does not touch stored data.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --exclude \"tests/emulator/**\"",
     "test:emulator": "firebase emulators:exec --only auth,firestore --project demo-notes \"vitest run tests/emulator\"",
-    "emulators": "firebase emulators:start --only auth,firestore --project demo-notes"
+    "emulators": "firebase emulators:start --only auth,firestore --project demo-notes",
+    "verify:dist": "node scripts/verify-dist.mjs"
   },
   "dependencies": {
     "@tiptap/extension-task-item": "^3.32.0",

@@ -3,6 +3,7 @@ import { initializeApp, deleteApp, type FirebaseApp } from 'firebase/app'
 import { connectFirestoreEmulator, deleteDoc, disableNetwork, doc, enableNetwork, getDoc, getFirestore, runTransaction, type Firestore } from 'firebase/firestore'
 import { connectAuthEmulator, getAuth, signInAnonymously } from 'firebase/auth'
 import { ConflictError, DeleteOutcomeUnknownError, createNote, deleteNote, saveNote, subscribeNotes, type Note } from '../../src/notesApi'
+import { provision } from './sessions'
 
 const apps: FirebaseApp[] = []
 let uid = ''
@@ -15,6 +16,7 @@ async function session(name: string): Promise<Firestore> {
   connectFirestoreEmulator(db, 'localhost', 8080)
   await signInAnonymously(auth)
   uid = auth.currentUser!.uid
+  await provision(uid)
   return db
 }
 afterAll(() => Promise.all(apps.map(deleteApp)))
@@ -69,7 +71,7 @@ async function sessionAs(name: string, sameUidAs?: string): Promise<{ db: Firest
     const { signInWithCustomToken } = await import('firebase/auth')
     const enc = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url')
     await signInWithCustomToken(auth, enc({ alg: 'none', typ: 'JWT' }) + '.' + enc({ uid: sameUidAs, aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit', iss: 'x', sub: 'x', iat: 0, exp: 9999999999 }) + '.')
-  } else await signInAnonymously(auth)
+  } else { await signInAnonymously(auth); await provision(auth.currentUser!.uid) }
   return { db, uid: auth.currentUser!.uid }
 }
 const exists = async (db: Firestore, uid: string, id: string) => (await getDoc(doc(db, 'users', uid, 'notes', id))).exists()

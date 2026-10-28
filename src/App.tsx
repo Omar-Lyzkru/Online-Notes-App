@@ -6,6 +6,7 @@ import { auth, db } from './firebase'
 import { ConflictError, DeleteOutcomeUnknownError, createNote, deleteNote, subscribeNotes, type Note } from './notesApi'
 import { Editor, type EditorHandle } from './Editor'
 import { Settings } from './Settings'
+import { AccessDenied } from './AccessDenied'
 import { usePreferences } from './usePreferences'
 import { indexNotes, searchNotes, type Indexed } from './search'
 
@@ -72,6 +73,15 @@ const heldDraftPrompt = (title: string) =>
   `A delete of ${quoted(title)} is still waiting for the server, and the open note has unsaved edits that are held until it answers. `
   + 'If you sign out now those edits are lost, even if the delete is then refused.\n\nSign out anyway?\n\nChoose Cancel to stay signed in and keep your draft.'
 
+/** Always offers the account chooser, so someone refused with one Google account can pick another. */
+function googleProvider() {
+  const p = new GoogleAuthProvider()
+  p.setCustomParameters({ prompt: 'select_account' })
+  return p
+}
+
+const isPermissionDenied = (e: unknown) => (e as { code?: string })?.code === 'permission-denied'
+
 type Auth = { status: 'loading' } | { status: 'out'; error?: string } | { status: 'in'; user: User }
 
 export default function App() {
@@ -86,7 +96,7 @@ export default function App() {
       <main className="center">
         <h1>Online Notes</h1>
         <p>Sign in to see your notes.</p>
-        <button onClick={() => signInWithPopup(auth, new GoogleAuthProvider())
+        <button onClick={() => signInWithPopup(auth, googleProvider())
           .catch((e) => setA({ status: 'out', error: e.message }))}>Sign in with Google</button>
         {a.error && <p role="alert" className="err">Sign-in failed: {a.error}</p>}
       </main>
@@ -101,6 +111,9 @@ function Notes({ user }: { user: User }) {
   const [fromCache, setFromCache] = useState(false)
   const [pendingWrites, setPendingWrites] = useState(false)
   const [err, setErr] = useState('')
+  // The server refused this account before ever serving it a note: it is not allowlisted (see AccessDenied).
+  const [denied, setDenied] = useState(false)
+  const served = useRef(false) // a server-confirmed snapshot arrived, so the account was let in at some point
   const [sel, setSel] = useState<string | null>(null)
   const [online, setOnline] = useState(navigator.onLine)
   const [leaving, setLeaving] = useState(false)
@@ -134,8 +147,9 @@ function Notes({ user }: { user: User }) {
   }
 
   useEffect(() => subscribeNotes(db, user.uid,
-    (n, cache, pending) => { setNotes(n); setFromCache(cache); setPendingWrites(pending); setErr('') },
-    (e) => setErr(e.message)), [user.uid])
+    (n, cache, pending) => { if (!cache) served.current = true; setNotes(n); setFromCache(cache); setPendingWrites(pending); setErr('') },
+    // A refusal after the account was let in (access revoked mid-session) keeps the screen, and any draft, and shows the error.
+    (e) => { if (isPermissionDenied(e) && !served.current) setDenied(true); else setErr(e.message) }), [user.uid])
 
   useEffect(() => {
     const up = () => setOnline(true), down = () => setOnline(false)
@@ -274,6 +288,11 @@ function Notes({ user }: { user: User }) {
   const searching = query.trim() !== ''
   // Unresolved deletes whose notice was dismissed (or replaced by a later one) stay visible.
   const lingering = Object.entries(unconfirmed).filter(([id]) => !(deletion?.phase === 'unknown' && deletion.id === id))
+
+  if (denied) {
+    return <AccessDenied who={user.displayName ?? user.email ?? 'This account'} error={err}
+      onSignOut={() => void signOut(auth).catch((e) => setErr(String(e.message ?? e)))} />
+  }
 
   return (
     <div className="app">

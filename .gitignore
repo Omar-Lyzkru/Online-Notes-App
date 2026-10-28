@@ -1,6 +1,16 @@
 node_modules
 dist
+# Local configuration stays out of Git: .env, .env.local, .env.production.local, .env.development.local ...
+# (only the *.example templates are tracked)
 .env
-.env.local
+.env.*
+!.env.example
+!.env.production.example
 *.log
 .firebase
+# A default project alias would make a bare `firebase deploy` silently target a project. Always pass --project.
+.firebaserc
+# Service-account keys and other credentials must never be committed
+*-adminsdk-*.json
+service-account*.json
+*.pem

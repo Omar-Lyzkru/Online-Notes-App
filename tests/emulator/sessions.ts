@@ -5,6 +5,25 @@ import { connectAuthEmulator, getAuth, signInAnonymously, signInWithCustomToken 
 const apps: FirebaseApp[] = []
 let n = 0
 
+const MEMBER = (uid: string, projectId: string) =>
+  `http://localhost:8080/v1/projects/${projectId}/databases/(default)/documents/authorizedUsers/${uid}`
+// The Firestore emulator treats this bearer token as privileged access, like the console or Admin credentials: it bypasses the rules.
+const PRIVILEGED = { Authorization: 'Bearer owner', 'Content-Type': 'application/json' }
+
+/**
+ * Adds a uid to the allowlist the way an operator would (privileged access, never through the rules).
+ * `fields` replaces the membership document's content, to test malformed states.
+ */
+export async function provision(uid: string, fields: object = { active: { booleanValue: true } }, projectId = 'demo-notes'): Promise<void> {
+  const r = await fetch(MEMBER(uid, projectId), { method: 'PATCH', headers: PRIVILEGED, body: JSON.stringify({ fields }) })
+  if (!r.ok) throw new Error(`provision failed: ${r.status} ${await r.text()}`)
+}
+/** Removes the membership document with privileged access. */
+export async function deprovision(uid: string, projectId = 'demo-notes'): Promise<void> {
+  const r = await fetch(MEMBER(uid, projectId), { method: 'DELETE', headers: PRIVILEGED })
+  if (!r.ok) throw new Error(`deprovision failed: ${r.status} ${await r.text()}`)
+}
+
 /**
  * A separate app instance (own Firestore cache and connection) against the emulators, signed in either
  * as a fresh anonymous user or, with `sameUidAs`, as an existing uid (the Auth emulator accepts unsigned custom tokens).
@@ -19,7 +38,19 @@ export async function session(sameUidAs?: string): Promise<{ db: Firestore; uid:
       uid: sameUidAs, aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',
       iss: 'x', sub: 'x', iat: 0, exp: 9999999999,
     }) + '.')
-  } else await signInAnonymously(auth)
+  } else {
+    await signInAnonymously(auth)
+    await provision(auth.currentUser!.uid)   // a fresh user is an approved one, unless the test says otherwise (see `unapprovedSession`)
+  }
+  return { db, uid: auth.currentUser!.uid }
+}
+
+/** A signed-in user that is NOT on the allowlist (a different Google account that managed to authenticate). */
+export async function unapprovedSession(): Promise<{ db: Firestore; uid: string }> {
+  const app = initializeApp({ apiKey: 'k', projectId: 'demo-notes' }, `u${++n}`); apps.push(app)
+  const auth = getAuth(app); connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true })
+  const db = getFirestore(app); connectFirestoreEmulator(db, 'localhost', 8080)
+  await signInAnonymously(auth)
   return { db, uid: auth.currentUser!.uid }
 }
 

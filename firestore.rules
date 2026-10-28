@@ -1,9 +1,19 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Personal-only access. A signed-in user is let in only if a membership document keyed by their own uid
+    // exists in authorizedUsers and says active == true. Anything else (missing, false, another type, a
+    // missing field) denies, so the rules fail closed. The collection is closed to every client (see below);
+    // members are added and removed only with privileged access (Firebase console / Admin credentials),
+    // which bypass these rules. No uid or email is written in this file.
+    function isAllowlisted() {
+      let member = /databases/$(database)/documents/authorizedUsers/$(request.auth.uid);
+      return exists(member) && get(member).data.get('active', false) == true;
+    }
+    // Both conditions are required: the path's uid is the caller's own, and the caller is allowlisted.
     // Ownership comes from the path (users/{uid}), never from a client-supplied field.
     function isOwner(uid) {
-      return request.auth != null && request.auth.uid == uid;
+      return request.auth != null && request.auth.uid == uid && isAllowlisted();
     }
     function validShape() {
       let d = request.resource.data;
@@ -24,6 +34,11 @@ service cloud.firestore {
         && d.updatedAt == request.time;
     }
 
+    // The allowlist: no client can read, list, create, change or delete it, whoever they are.
+    match /authorizedUsers/{member} {
+      allow read, write: if false;
+    }
+
     match /users/{uid}/preferences/appearance {
       allow read: if isOwner(uid);
       allow create, update: if isOwner(uid) && validPrefs();
@@ -36,6 +51,11 @@ service cloud.firestore {
       allow update: if isOwner(uid) && validShape()
         && request.resource.data.rev == resource.data.rev + 1
         && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    // Everything else, including any path under a user that is not listed above, stays closed.
+    match /{path=**} {
+      allow read, write: if false;
     }
   }
 }

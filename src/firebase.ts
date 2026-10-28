@@ -1,23 +1,20 @@
 import { initializeApp } from 'firebase/app'
-import { connectAuthEmulator, getAuth } from 'firebase/auth'
-import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore'
+import { getAuth } from 'firebase/auth'
+import { getFirestore } from 'firebase/firestore'
+import { liveOptions, resolveFirebaseSetup } from './firebaseConfig'
+import { EMULATOR_OPTIONS, connectEmulators } from './emulators'
 
-const env = import.meta.env
-const useEmulators = env.VITE_USE_EMULATORS === 'true'
+const PROD = import.meta.env.PROD
+// Throws a ConfigError for a missing or inconsistent configuration; main.tsx checks the same thing first and shows it.
+const setup = resolveFirebaseSetup(import.meta.env, PROD)
+// A production build can never use the emulators: `!PROD` is a build-time constant, so this branch and
+// everything it references are removed from the bundle.
+const emulate = !PROD && setup.kind === 'emulator'
 
-const app = initializeApp({
-  apiKey: env.VITE_FIREBASE_API_KEY || 'demo-key',
-  // The Auth SDK refuses popup sign-in without an authDomain, even against the emulator (which supplies its own URL).
-  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || (useEmulators ? 'localhost' : undefined),
-  projectId: env.VITE_FIREBASE_PROJECT_ID || 'demo-notes',
-  appId: env.VITE_FIREBASE_APP_ID,
-})
+const app = initializeApp(emulate ? EMULATOR_OPTIONS : liveOptions(setup))
 
 export const auth = getAuth(app)
 // getFirestore uses the default in-memory cache: no persistent offline cache is enabled (needs owner approval).
 export const db = getFirestore(app)
 
-if (useEmulators) {
-  connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true })
-  connectFirestoreEmulator(db, 'localhost', 8080)
-}
+if (emulate) connectEmulators(auth, db)

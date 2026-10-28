@@ -68,6 +68,7 @@ describe('what a stricter rules design could enforce (candidate rules, evaluated
   beforeAll(async () => {
     env = await initializeTestEnvironment({ projectId: 'demo-notes-candidate', firestore: { rules: candidate, host: 'localhost', port: 8080 } })
     await env.clearFirestore()
+    await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), 'authorizedUsers/alice'), { active: true }))
   })
   afterAll(() => env.cleanup())
   const seed = (rev: number, extra: object = {}) => env.withSecurityRulesDisabled((c) =>

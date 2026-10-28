@@ -16,7 +16,12 @@ beforeAll(async () => {
 afterAll(() => env.cleanup())
 beforeEach(async () => {
   await env.clearFirestore()
-  await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), 'users/alice/notes/n1'), { ...valid(), createdAt: new Date(), updatedAt: new Date() }))
+  await env.withSecurityRulesDisabled(async (c) => {
+    // alice and bob are both approved, so the tests below about "another user" test ownership, not the allowlist (see allowlist.test.ts)
+    await setDoc(doc(c.firestore(), 'authorizedUsers/alice'), { active: true })
+    await setDoc(doc(c.firestore(), 'authorizedUsers/bob'), { active: true })
+    await setDoc(doc(c.firestore(), 'users/alice/notes/n1'), { ...valid(), createdAt: new Date(), updatedAt: new Date() })
+  })
 })
 
 const alice = () => env.authenticatedContext('alice').firestore()
